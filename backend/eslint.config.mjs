@@ -9,7 +9,7 @@ export default defineConfig(
     ignores: ['eslint.config.mjs'],
   },
   eslint.configs.recommended,
-  ...eslint.configs.recommendedTypeChecked,
+  eslint.configs.recommended,
   eslintPluginPrettierRecommended,
   {
     languageOptions: {

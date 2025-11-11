@@ -165,13 +165,11 @@ export class RealtimeService implements OnModuleInit {
         return doc;
       } catch {}
     }
-    const yRoot = doc.getMap('root') as Y.Map<any>;
+    const yRoot = doc.getMap('root');
     const yNodes = new Y.Array<any>();
-    if (Array.isArray(snap.nodes) && snap.nodes.length)
-      yNodes.push(snap.nodes as any[]);
+    if (Array.isArray(snap.nodes) && snap.nodes.length) yNodes.push(snap.nodes);
     const yEdges = new Y.Array<any>();
-    if (Array.isArray(snap.edges) && snap.edges.length)
-      yEdges.push(snap.edges as any[]);
+    if (Array.isArray(snap.edges) && snap.edges.length) yEdges.push(snap.edges);
     yRoot.set('nodes', yNodes);
     yRoot.set('edges', yEdges);
     return doc;

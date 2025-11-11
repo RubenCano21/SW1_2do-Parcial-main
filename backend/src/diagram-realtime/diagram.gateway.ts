@@ -107,7 +107,7 @@ export class DiagramGateway implements OnGatewayInit {
       return persisted;
     }
 
-    return current!;
+    return current;
   }
 
   // ===== JOIN a sala por proyecto =====
@@ -158,8 +158,8 @@ export class DiagramGateway implements OnGatewayInit {
 
     // 3) Join + estado del cliente
     client.join(projectId);
-    (client.data as any) = {
-      ...(client.data as any),
+    client.data = {
+      ...client.data,
       projectId,
       userId,
       role,
@@ -198,7 +198,7 @@ export class DiagramGateway implements OnGatewayInit {
     const userId = await this.parseUserIdFromToken(data?.authToken);
     if (!userId) return;
     client.join(`user:${userId}`);
-    (client.data as any) = { ...(client.data as any), userId };
+    client.data = { ...client.data, userId };
     console.log('[joinOwner] socket', client.id, 'userId', userId);
   }
 
@@ -209,7 +209,7 @@ export class DiagramGateway implements OnGatewayInit {
     @ConnectedSocket() client: Socket,
   ) {
     const { projectId } = data;
-    if ((client.data as any)?.projectId !== projectId) return;
+    if (client.data?.projectId !== projectId) return;
     const st = this.realtime.touchPresence(projectId, client.id);
     if (!st) return;
     client.emit('presence:pong', { ts: Date.now() });
@@ -222,13 +222,11 @@ export class DiagramGateway implements OnGatewayInit {
     @ConnectedSocket() client: Socket,
   ) {
     const { projectId, patch } = data;
-    if ((client.data as any)?.projectId !== projectId) return;
-    const role = (client.data as any)?.role;
+    if (client.data?.projectId !== projectId) return;
+    const role = client.data?.role;
     if (role !== 'EDITOR' && role !== 'OWNER') {
       client.emit('editDenied', {
-        reason: (client.data as any)?.userId
-          ? 'no_permission'
-          : 'login_required',
+        reason: client.data?.userId ? 'no_permission' : 'login_required',
       });
       return;
     }
@@ -242,7 +240,7 @@ export class DiagramGateway implements OnGatewayInit {
     @ConnectedSocket() client: Socket,
   ) {
     const { projectId, message } = data;
-    const userId = (client.data as any)?.userId;
+    const userId = client.data?.userId;
     if (!userId) {
       client.emit('editDenied', { reason: 'login_required' });
       return;
@@ -252,7 +250,7 @@ export class DiagramGateway implements OnGatewayInit {
     });
     if (member) {
       client.emit('editGranted', { role: member.role });
-      (client.data as any).role = 'EDITOR';
+      client.data.role = 'EDITOR';
       return;
     }
 
@@ -285,7 +283,7 @@ export class DiagramGateway implements OnGatewayInit {
   ) {
     const { projectId, userId, role = 'EDITOR' } = data;
 
-    const me = (client.data as any)?.userId;
+    const me = client.data?.userId;
     console.log(
       '[approveEdit] by',
       me,
@@ -355,7 +353,7 @@ export class DiagramGateway implements OnGatewayInit {
     @ConnectedSocket() client: Socket,
   ) {
     const { projectId } = data;
-    if ((client.data as any)?.projectId !== projectId) return;
+    if (client.data?.projectId !== projectId) return;
     const sync = this.realtime.getSyncUpdate(projectId);
     if (sync) client.emit('y:sync', { updateBase64: toBase64(sync) });
   }
@@ -366,13 +364,11 @@ export class DiagramGateway implements OnGatewayInit {
     @ConnectedSocket() client: Socket,
   ) {
     const { projectId, updateBase64 } = data;
-    if ((client.data as any)?.projectId !== projectId) return;
-    const role = (client.data as any)?.role;
+    if (client.data?.projectId !== projectId) return;
+    const role = client.data?.role;
     if (role !== 'EDITOR' && role !== 'OWNER') {
       client.emit('editDenied', {
-        reason: (client.data as any)?.userId
-          ? 'no_permission'
-          : 'login_required',
+        reason: client.data?.userId ? 'no_permission' : 'login_required',
       });
       return;
     }
@@ -388,7 +384,7 @@ export class DiagramGateway implements OnGatewayInit {
     @ConnectedSocket() client: Socket,
   ) {
     const { projectId, states } = data;
-    if ((client.data as any)?.projectId !== projectId) return;
+    if (client.data?.projectId !== projectId) return;
     client.to(projectId).emit('awareness:remote', { states, from: client.id });
   }
 
@@ -408,14 +404,14 @@ export class DiagramGateway implements OnGatewayInit {
     this.parseUserIdFromToken(authToken).then((userId) => {
       if (userId) {
         client.join(`user:${userId}`);
-        (client.data as any) = { ...(client.data as any), userId };
+        client.data = { ...client.data, userId };
         console.log('[handleConnection] socket', client.id, 'userId', userId);
       }
     });
   }
 
   handleDisconnect(client: Socket) {
-    const projectId = (client.data as any)?.projectId;
+    const projectId = client.data?.projectId;
     if (projectId) {
       const st = this.realtime.removePresence(projectId, client.id);
       if (st) this.server.to(projectId).emit('presence:left', st);

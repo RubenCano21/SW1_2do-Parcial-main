@@ -13,10 +13,15 @@ import { JwtStrategy } from './jwt.strategy';
     JwtModule.registerAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
-      useFactory: (cfg: ConfigService) => ({
-        secret: cfg.get<string>('JWT_SECRET'),
-        signOptions: { expiresIn: cfg.get<string>('JWT_EXPIRES') || '1h' },
-      }),
+      useFactory: (cfg: ConfigService) => {
+        const expiresIn = cfg.get<string>('JWT_EXPIRES') || '1h';
+        return {
+          secret: cfg.get<string>('JWT_SECRET'),
+          signOptions: { 
+            expiresIn: expiresIn as any, // Cast needed for StringValue type from 'ms' package
+          },
+        };
+      },
     }),
   ],
   providers: [AuthService, JwtStrategy],

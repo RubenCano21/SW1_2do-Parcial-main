@@ -5,14 +5,12 @@ import Redis, { RedisOptions } from 'ioredis';
 function makeRedis(urlEnv?: string) {
   const url = urlEnv ?? 'redis://localhost:6379';
   const client = new Redis(url, {
-   
     maxRetriesPerRequest: null,
     enableReadyCheck: true,
-    retryStrategy: (times) => Math.min(times * 200, 2000), 
+    retryStrategy: (times) => Math.min(times * 200, 2000),
   } as RedisOptions);
 
   client.on('error', (err) => {
-    
     console.error('[Redis] error:', err?.message ?? err);
   });
   client.on('connect', () => console.log('[Redis] connected'));

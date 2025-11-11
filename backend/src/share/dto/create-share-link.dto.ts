@@ -1,10 +1,17 @@
 // src/share/dto/create-share-link.dto.ts
 import { IsEnum, IsISO8601, IsOptional } from 'class-validator';
-import { ProjectRole } from '@prisma/client';
+
+// Definir enum nativo para validación (debe coincidir con Prisma)
+export enum ProjectRoleEnum {
+  OWNER = 'OWNER',
+  ADMIN = 'ADMIN',
+  EDITOR = 'EDITOR',
+  VIEWER = 'VIEWER',
+}
 
 export class CreateShareLinkDto {
-  @IsEnum(ProjectRole, { message: 'role inválido' })
-  role!: ProjectRole; // normalmente VIEWER
+  @IsEnum(ProjectRoleEnum, { message: 'role inválido' })
+  role!: ProjectRoleEnum; // normalmente VIEWER
 
   @IsOptional()
   @IsISO8601({ strict: true }, { message: 'expiresAt debe ser ISO8601' })

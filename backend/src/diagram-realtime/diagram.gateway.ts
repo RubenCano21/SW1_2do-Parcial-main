@@ -35,13 +35,14 @@ type Snapshot = { nodes: any[]; edges: any[] };
   namespace: '/diagram',
   path: '/socket.io',
   cors: {
-    // En dev, más permisivo para evitar "origin mismatch" al hacer upgrade:
     origin: [
       'http://localhost:5173',
       'http://127.0.0.1:5173',
       'http://localhost',
       'http://127.0.0.1',
-    ],
+      process.env.FRONTEND_URL, // Production frontend URL
+      process.env.CORS_ORIGIN,  // Additional CORS origins
+    ].filter(Boolean), // Remove undefined values
     credentials: true,
   },
   transports: ['websocket', 'polling'],

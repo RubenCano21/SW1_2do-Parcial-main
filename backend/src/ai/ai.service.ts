@@ -61,14 +61,23 @@ export interface AiResponse {
 @Injectable()
 export class AiService {
   private groq: Groq;
+  private hasValidApiKey: boolean = false;
 
   constructor() {
     const apiKey = process.env.GROQ_API_KEY;
-    if (!apiKey) {
+    if (!apiKey || apiKey === 'gsk_dev_placeholder') {
+      console.warn('[AI Service] GROQ_API_KEY not configured. AI features will use fallbacks.');
+      this.hasValidApiKey = false;
+      this.groq = new Groq({
+        apiKey: 'gsk_dev_placeholder',
+      });
+    } else {
+      console.log('[AI Service] GROQ_API_KEY configured successfully');
+      this.hasValidApiKey = true;
+      this.groq = new Groq({
+        apiKey: apiKey,
+      });
     }
-    this.groq = new Groq({
-      apiKey: apiKey || 'gsk_dev_placeholder', // evita hardcodear un key “real”
-    });
   }
 
   async suggestCardinality(
@@ -306,6 +315,12 @@ Ejemplos de análisis:
         return this.getImageAnalysisFallback();
       }
 
+      // Check if we have a valid API key before making Groq call
+      if (!this.hasValidApiKey) {
+        console.warn('[AI] GROQ_API_KEY not configured, using fallback analysis');
+        return this.getImageAnalysisFallbackWithText(extractedText);
+      }
+
       // 3. Procesar el texto extraído con Groq para identificar clases UML
       const systemPrompt = `Analiza este texto extraído de un diagrama UML y extrae la información de clases.
 
@@ -358,7 +373,8 @@ RESPONDE SIEMPRE en formato JSON válido:
       const raw = completion.choices?.[0]?.message?.content ?? '';
       console.log('[AI] Raw Groq response:', raw);
 
-      if (!raw) {
+      if (!raw || raw.trim().length === 0) {
+        console.warn('[AI] Empty response from Groq, using fallback with text');
         return this.getImageAnalysisFallbackWithText(extractedText);
       }
 

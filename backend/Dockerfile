@@ -28,13 +28,17 @@ FROM node:20-alpine AS production
 
 WORKDIR /app
 
-# Solo copiamos las dependencias necesarias para prod
+# Copiar package.json y lock
 COPY package*.json ./
 
+# Copiar Prisma schema ANTES de instalar dependencias
+COPY --from=builder /app/prisma ./prisma
+
+# Instalar dependencias de producción
 RUN npm install --omit=dev
 
-# Copiar Prisma schema para migraciones en Render (opcional)
-COPY --from=builder /app/prisma ./prisma
+# Generar Prisma Client en producción
+RUN npx prisma generate
 
 # Copiar dist compilado
 COPY --from=builder /app/dist ./dist

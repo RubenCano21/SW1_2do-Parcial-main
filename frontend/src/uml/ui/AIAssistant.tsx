@@ -766,14 +766,27 @@ export default function AIAssistant({
         body: formData,
       });
 
-      if (!res.ok) {
+      // Intentar parsear la respuesta como JSON
+      let aiResponse;
+      const contentType = res.headers.get("content-type");
+      
+      if (contentType && contentType.includes("application/json")) {
+        aiResponse = await res.json();
+      } else {
+        // Si no es JSON, obtener como texto
         const errorText = await res.text();
+        console.error("[AIAssistant] Respuesta no-JSON:", errorText);
         throw new Error(
-          errorText || "Error al escanear la imagen del diagrama"
+          "El servidor no devolvió una respuesta válida. Verifica que el backend esté funcionando correctamente."
         );
       }
 
-      const aiResponse = await res.json();
+      // Si la respuesta no es OK pero tenemos JSON, mostrar el mensaje de error
+      if (!res.ok) {
+        throw new Error(
+          aiResponse.message || "Error al escanear la imagen del diagrama"
+        );
+      }
 
       console.log("[AIAssistant] 📸 Scan de imagen completado:", {
         message: aiResponse.message?.substring(0, 100),

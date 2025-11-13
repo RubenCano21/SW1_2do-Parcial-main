@@ -31,13 +31,21 @@ export interface DiagramScanResult {
 @Injectable()
 export class DiagramScannerService {
   private groq: Groq;
+  private hasValidApiKey: boolean = false;
 
   constructor() {
     const apiKey = process.env.GROQ_API_KEY;
-    if (!apiKey) {
-      throw new Error('GROQ_API_KEY no está configurada');
+    if (!apiKey || apiKey === 'gsk_dev_placeholder') {
+      console.warn('[DiagramScanner] GROQ_API_KEY no está configurada. Usando modo fallback.');
+      this.hasValidApiKey = false;
+      this.groq = new Groq({
+        apiKey: 'gsk_dev_placeholder',
+      });
+    } else {
+      console.log('[DiagramScanner] GROQ_API_KEY configurada correctamente');
+      this.hasValidApiKey = true;
+      this.groq = new Groq({ apiKey });
     }
-    this.groq = new Groq({ apiKey });
   }
 
   /**
@@ -340,6 +348,12 @@ export class DiagramScannerService {
    * Analiza el texto con Groq usando prompts ultra-específicos
    */
   private async analyzeWithGroq(extractedText: string): Promise<any> {
+    // Si no hay API key válida, usar fallback de emergencia
+    if (!this.hasValidApiKey) {
+      console.warn('[DiagramScanner] Sin API key válida, usando análisis de emergencia');
+      return this.emergencyAnalysis(extractedText);
+    }
+
     const systemPrompt = `Eres un experto analista de diagramas UML de clases. Tu misión es interpretar texto extraído por OCR y reconstruir el diagrama con MÁXIMA PRECISIÓN.
 
 **ESTRUCTURA DE UN DIAGRAMA UML:**
@@ -562,6 +576,20 @@ Debes responder:
 
     console.log(`[Emergency] Extraídas ${classes.length} clases`);
     return classes;
+  }
+
+  /**
+   * Análisis de emergencia completo cuando no hay API key de Groq
+   */
+  private emergencyAnalysis(extractedText: string): any {
+    const classes = this.emergencyClassExtraction(extractedText);
+    
+    return {
+      classes: classes,
+      relations: [],
+      description: 'Análisis básico de texto extraído (sin IA)',
+      confidence: 'low',
+    };
   }
 
   /**

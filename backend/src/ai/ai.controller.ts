@@ -76,11 +76,29 @@ export class AiController {
   async analyzeImage(
     @UploadedFile() file: Express.Multer.File,
   ): Promise<AiResponse> {
-    if (!file) {
-      throw new Error('No se proporcionó ningún archivo de imagen');
-    }
+    try {
+      if (!file) {
+        return {
+          content: 'No se proporcionó ningún archivo de imagen',
+          suggestions: {
+            classes: [],
+            relations: [],
+          },
+        };
+      }
 
-    return this.aiService.analyzeUmlFromImage(file.buffer);
+      return this.aiService.analyzeUmlFromImage(file.buffer);
+    } catch (error) {
+      console.error('[AI Controller] ❌ Error al analizar imagen:', error);
+      
+      return {
+        content: `Error al procesar la imagen: ${error.message || 'Error desconocido'}`,
+        suggestions: {
+          classes: [],
+          relations: [],
+        },
+      };
+    }
   }
 
   @Post('scan-diagram')
@@ -101,35 +119,65 @@ export class AiController {
   async scanDiagram(
     @UploadedFile() file: Express.Multer.File,
   ): Promise<AssistantResponse> {
-    if (!file) {
-      throw new Error('No se proporcionó ningún archivo de imagen');
+    try {
+      if (!file) {
+        return {
+          message: '❌ No se proporcionó ningún archivo de imagen',
+          suggestions: {
+            classes: [],
+            relations: [],
+          },
+          tips: ['Por favor, selecciona un archivo de imagen válido'],
+        };
+      }
+
+      console.log('[AI Controller] Escaneando diagrama desde imagen:', {
+        filename: file.originalname,
+        size: file.size,
+        mimetype: file.mimetype,
+      });
+
+      // Paso 1: Escanear la imagen con OCR + IA
+      const scanResult = await this.diagramScanner.scanDiagramImage(file.buffer);
+
+      console.log('[AI Controller] Scan completado:', {
+        classCount: scanResult.classes.length,
+        relationCount: scanResult.relations.length,
+        confidence: scanResult.confidence,
+      });
+
+      // Paso 2: Convertir el resultado del scan en sugerencias para el asistente
+      const assistantResponse =
+        await this.assistantService.convertScanToSuggestions(scanResult);
+
+      console.log('[AI Controller] Sugerencias generadas:', {
+        classesCount: assistantResponse.suggestions?.classes?.length || 0,
+        relationsCount: assistantResponse.suggestions?.relations?.length || 0,
+      });
+
+      return assistantResponse;
+    } catch (error) {
+      console.error('[AI Controller] ❌ Error al escanear diagrama:', error);
+      
+      // Devolver siempre JSON válido incluso en caso de error
+      return {
+        message: `❌ Error al procesar la imagen: ${error.message || 'Error desconocido'}`,
+        suggestions: {
+          classes: [],
+          relations: [],
+        },
+        tips: [
+          '📷 Asegúrate de que la imagen sea clara y legible',
+          '🔍 Verifica que contenga un diagrama UML con clases visibles',
+          '💡 Usa imágenes con buena resolución y contraste',
+        ],
+        nextSteps: [
+          'Intenta con una imagen más clara',
+          'Asegúrate de que el texto sea legible',
+          'Verifica que sea un diagrama UML de clases',
+        ],
+      };
     }
-
-    console.log('[AI Controller] Escaneando diagrama desde imagen:', {
-      filename: file.originalname,
-      size: file.size,
-      mimetype: file.mimetype,
-    });
-
-    // Paso 1: Escanear la imagen con OCR + IA
-    const scanResult = await this.diagramScanner.scanDiagramImage(file.buffer);
-
-    console.log('[AI Controller] Scan completado:', {
-      classCount: scanResult.classes.length,
-      relationCount: scanResult.relations.length,
-      confidence: scanResult.confidence,
-    });
-
-    // Paso 2: Convertir el resultado del scan en sugerencias para el asistente
-    const assistantResponse =
-      await this.assistantService.convertScanToSuggestions(scanResult);
-
-    console.log('[AI Controller] Sugerencias generadas:', {
-      classesCount: assistantResponse.suggestions?.classes?.length || 0,
-      relationsCount: assistantResponse.suggestions?.relations?.length || 0,
-    });
-
-    return assistantResponse;
   }
 
   @Post('asistente')
